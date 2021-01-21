@@ -34,7 +34,8 @@ const laptopSchema = new mongoose.Schema({
         required : true
     },
     image : {
-        type : mongoose.Schema.Types.Buffer
+        type : mongoose.Schema.Types.String,
+        required : true
     }
 });
 

@@ -1,8 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 
 const Laptop = require('../db/models/laptop');
 const isOwner = require('../middlerwares/owner');
+
+var storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, './images');
+    },
+
+    filename: (req, file, cb) => {
+      cb(null, new Date().toISOString() + file.originalname);
+    }
+});
+var upload = multer({storage : storage});
 
 router.get('/laptops/allLaptops',async(req,res) => {
     const match = {};
@@ -29,10 +41,11 @@ router.get('/laptops/getLaptop/:id',async(req,res) => {
     }
 });
 
-router.post('/laptops/addLaptop', isOwner,async(req,res) => {
+router.post('/laptops/addLaptop', upload.single('laptopImage'),async(req,res) => {
     try {
         let laptop = new Laptop({
-            ...req.body
+            ...req.body,
+            image: req.file.path
         });
         laptop = await laptop.save();
         res.status(201).json(laptop);
