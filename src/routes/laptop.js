@@ -8,7 +8,7 @@ const isOwner = require('../middlerwares/owner');
 
 const upload = require('../multerConfiguration');
 
-router.get('/laptops/allLaptops',async(req,res) => {
+router.get('/laptops/allLaptops', async(req,res) => {
     const match = {};
     if(req.query.brand) {
         match.brand = req.query.brand;
@@ -21,7 +21,7 @@ router.get('/laptops/allLaptops',async(req,res) => {
     }
 });
 
-router.get('/laptops/getLaptop/:id',async(req,res) => {
+router.get('/laptops/getLaptop/:id', async(req,res) => {
     try {
         const laptop =  await Laptop.findById(req.params.id);
         if(!laptop) {
@@ -46,7 +46,7 @@ router.post('/laptops/addLaptop', isOwner, upload.single('laptopImage'),async(re
     }
 });
 
-router.patch('/laptops/updateLaptop/:id', upload.single('laptopImage'),async(req,res) => {
+router.patch('/laptops/updateLaptop/:id', isOwner, upload.single('laptopImage'),async(req,res) => {
     try {
         let laptop;
         if(req.file) {
@@ -73,7 +73,7 @@ router.patch('/laptops/updateLaptop/:id', upload.single('laptopImage'),async(req
     }
 });
 
-router.delete('/laptops/deleteLaptop/:id',async(req,res) => {
+router.delete('/laptops/deleteLaptop/:id', isOwner, async(req,res) => {
     try {
         const laptop = await Laptop.findById(req.params.id);
         if(!laptop) {
