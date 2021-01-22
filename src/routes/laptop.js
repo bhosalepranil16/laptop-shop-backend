@@ -1,20 +1,12 @@
+const fs = require('fs');
+
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 
 const Laptop = require('../db/models/laptop');
 const isOwner = require('../middlerwares/owner');
 
-var storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, './images');
-    },
-
-    filename: (req, file, cb) => {
-      cb(null, new Date().toISOString() + file.originalname);
-    }
-});
-var upload = multer({storage : storage});
+const upload = require('../multerConfiguration');
 
 router.get('/laptops/allLaptops',async(req,res) => {
     const match = {};
@@ -41,7 +33,7 @@ router.get('/laptops/getLaptop/:id',async(req,res) => {
     }
 });
 
-router.post('/laptops/addLaptop', upload.single('laptopImage'),async(req,res) => {
+router.post('/laptops/addLaptop', isOwner, upload.single('laptopImage'),async(req, res) => {
     try {
         let laptop = new Laptop({
             ...req.body,
@@ -54,26 +46,46 @@ router.post('/laptops/addLaptop', upload.single('laptopImage'),async(req,res) =>
     }
 });
 
-router.patch('/laptops/updateLaptop/:id', isOwner,async(req,res) => {
+router.patch('/laptops/updateLaptop/:id', upload.single('laptopImage'),async(req,res) => {
     try {
-        const laptop = await Laptop.findByIdAndUpdate(req.params.id,req.body, {new : true});
+        let laptop;
+        if(req.file) {
+            laptop = await Laptop.findById(req.params.id);
+            if(!laptop) {
+                return res.sendStatus(404);
+            }
+            fs.unlink(laptop.image, async(err) => {
+                if(err) {
+                    throw new Error(err);
+                }
+                laptop = await Laptop.findByIdAndUpdate(req.params.id,{ ...req.body, image: req.file.path }, {new : true});
+            });
+        }
+        else {
+            laptop = await Laptop.findByIdAndUpdate(req.params.id,req.body, {new : true});
+        }
         if(!laptop) {
             return res.sendStatus(404);
         }
-        res.send(laptop);
+        res.status(200).json(laptop);
     } catch (error) {
-        console.log(error)
         res.sendStatus(500);
     }
 });
 
-router.delete('/laptops/deleteLaptop/:id', isOwner,async(req,res) => {
+router.delete('/laptops/deleteLaptop/:id',async(req,res) => {
     try {
-        const laptop = await Laptop.findByIdAndDelete(req.params.id);
+        const laptop = await Laptop.findById(req.params.id);
         if(!laptop) {
             return res.status(404).send();
         }
-        res.send();
+        fs.unlink(laptop.image, async(err) => {
+            if(err) {
+                throw new Error(err);
+            }
+            await Laptop.deleteOne({_id : laptop._id});
+        });
+        res.status(200).send();
     } catch (error) {
         res.status(500).send();
     }

@@ -5,19 +5,19 @@ const router = express.Router();
 
 const Owner = require('../db/models/owner');
 
-// router.post('/owner/newOwner',async(req, res) => {
-//     try {
-//         const hashedPassword = await bcrypt.hash(req.body.password, 8);
-//         const owner = new Owner({
-//             email: req.body.email,
-//             password: hashedPassword
-//         });
-//         await owner.save();
-//         res.status(201).json(owner);
-//     } catch (error) {
-//         res.status(400).json(error);
-//     }
-// });
+router.post('/owner/newOwner',async(req, res) => {
+    try {
+        const hashedPassword = await bcrypt.hash(req.body.password, 8);
+        const owner = new Owner({
+            email: req.body.email,
+            password: hashedPassword
+        });
+        await owner.save();
+        res.status(201).json(owner);
+    } catch (error) {
+        res.status(400).json(error);
+    }
+});
 
 router.post('/owner/login',async(req,res) => {
     try {
