@@ -1,6 +1,7 @@
 const router = require('express').Router();
 
 const Order = require('../db/models/order');
+const Laptop = require('../db/models/laptop');
 const isUser = require('../middlerwares/user');
 const isOwner = require('../middlerwares/owner');
 
@@ -23,7 +24,7 @@ router.get('/orders/me', isUser, async(req, res) => {
             throw new Error('Unauthenticated');
         }
         const orders = await Order.find({ user : req._id }, null, { skip: (req.query.page - 1) * 5, limit : 5 })
-                        .populate('laptop').populate('user');;
+                        .populate('laptop').populate('user');
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json(err);
@@ -48,10 +49,16 @@ router.patch('/orders/placeOrder/:id', isOwner, async(req, res) => {
             throw new Error('Unauthenticated');
         }
         let order = await Order.findById(req.params.id);
-        if(!order) {
+        let laptop = await Laptop.findById(order.laptop);
+        if(!order || !laptop) {
             res.status(404).send();
         }
-        order = await Order.updateOne({ _id: req.params.id }, { placed : true });
+        await Order.updateOne({ _id: req.params.id }, { placed : true });
+        const newLaptop = {
+            ...laptop._doc,
+            quantity : laptop.quantity - order.quantity
+        }
+        await Laptop.updateOne({_id : laptop._id}, newLaptop)
         res.status(200).json(order);
     } catch (error) {
         res.status(500).json(error);
