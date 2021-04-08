@@ -29,7 +29,7 @@ router.get('/laptops/getLaptop/:id', async(req,res) => {
         }
         res.json(laptop);
     } catch (error) {
-        res.status(404).send();
+        res.status(500).json(error);
     }
 });
 

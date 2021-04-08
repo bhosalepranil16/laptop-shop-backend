@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config();
 const express = require('express');
 require('./db/mongoose');
 const app = express();
@@ -20,5 +20,5 @@ app.use(userRoutes);
 app.use(orderRoutes);
 
 app.listen(port, () => {
-	console.log(`Server is up on port ${port}`)
-})
+	console.log(`Server is up on port ${port}`);
+});

@@ -24,7 +24,7 @@ router.get('/orders/me', isUser, async(req, res) => {
             throw new Error('Unauthenticated');
         }
         const orders = await Order.find({ user : req._id }, null, { skip: (req.query.page - 1) * 5, limit : 5 })
-                        .populate('laptop').populate('user');
+                        .populate('laptop');
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json(err);
