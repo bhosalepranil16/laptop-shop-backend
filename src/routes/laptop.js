@@ -1,94 +1,131 @@
-const fs = require('fs');
+const fs = require("fs");
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const Laptop = require('../db/models/laptop');
-const isOwner = require('../middlerwares/owner');
+const Laptop = require("../db/models/laptop");
+const isOwner = require("../middlerwares/owner");
 
-const upload = require('../multerConfiguration');
+const upload = require("../multerConfiguration");
 
-router.get('/laptops/allLaptops', async(req,res) => {
-    const match = {};
-    if(req.query.brand) {
-        match.brand = req.query.brand;
-    }
-    try {
-        const laptops = await Laptop.find(match, null, {skip: (req.query.page - 1) * 5, limit: 5 });
-        res.json(laptops);
-    } catch (error) {
-        res.status(500).send();
-    }
+router.get("/api/laptops", async (req, res) => {
+	const match = {};
+	if (req.query.brand) {
+		match.brand = req.query.brand;
+	}
+	try {
+		let laptops;
+		if(req.query.page) {
+			laptops = await Laptop.find(match, null, { skip: (req.query.page - 1) * 5, limit: 5});
+		}
+		else {
+			laptops = await Laptop.find(match);
+		}
+		
+		res.status(200).json({ ok: true, error: null, data: laptops });
+	} catch (error) {
+		console.log("error", error);
+		res
+			.status(500)
+			.json({ ok: false, error: "Internal Server Error", data: null });
+	}
 });
 
-router.get('/laptops/getLaptop/:id', async(req,res) => {
-    try {
-        const laptop =  await Laptop.findById(req.params.id);
-        if(!laptop) {
-            return res.status(404).send();
-        }
-        res.json(laptop);
-    } catch (error) {
-        res.status(500).json(error);
-    }
+router.get("/api/laptops/:id", async (req, res) => {
+	try {
+		const laptop = await Laptop.findById(req.params.id);
+		if (!laptop) {
+			return res
+				.status(404)
+				.json({ ok: false, error: "Not Found", data: null });
+		}
+		res.status(200).json({ ok: true, error: null, data: laptop });
+	} catch (error) {
+		console.log("error", error);
+		res
+			.status(500)
+			.json({ ok: false, error: "Internal Server Error", data: null });
+	}
 });
 
-router.post('/laptops/addLaptop', isOwner, upload.single('laptopImage'),async(req, res) => {
-    try {
-        let laptop = new Laptop({
-            ...req.body,
-            image: req.file.path
-        });
-        laptop = await laptop.save();
-        res.status(201).json(laptop);
-    } catch (error) {
-        res.status(500).json(error);
-    }
-});
+router.post(
+	"/api/laptops",
+	isOwner,
+	upload.single("laptopImage"),
+	async (req, res) => {
+		try {
+			let laptop = new Laptop({
+				...req.body,
+				image: req.file.path,
+			});
+			laptop = await laptop.save();
+			res.status(201).json({ ok: true, error: null, data: laptop });
+		} catch (error) {
+			console.log("error", error);
+			res
+				.status(500)
+				.json({ ok: false, error: "Internal Server Error", data: null });
+		}
+	}
+);
 
-router.patch('/laptops/updateLaptop/:id', isOwner, upload.single('laptopImage'),async(req,res) => {
-    try {
-        let laptop;
-        if(req.file) {
-            laptop = await Laptop.findById(req.params.id);
-            if(!laptop) {
-                return res.sendStatus(404);
-            }
-            fs.unlink(laptop.image, async(err) => {
-                if(err) {
-                    throw new Error(err);
-                }
-                laptop = await Laptop.findByIdAndUpdate(req.params.id,{ ...req.body, image: req.file.path }, {new : true});
-            });
-        }
-        else {
-            laptop = await Laptop.findByIdAndUpdate(req.params.id,req.body, {new : true});
-        }
-        if(!laptop) {
-            return res.sendStatus(404);
-        }
-        res.status(200).json(laptop);
-    } catch (error) {
-        res.sendStatus(500);
-    }
-});
+router.patch("/api/laptops/:id", isOwner, upload.single("laptopImage"), async (req, res) => {
+	try {
+		let laptop;
+		if (req.file) {
+			laptop = await Laptop.findById(req.params.id);
+			if (!laptop) {
+				return res
+					.status(404)
+					.json({ ok: false, error: "Not Found", data: null });
+			}
+			fs.unlink(laptop.image, async (err) => {
+				if (err) {
+					throw new Error(err);
+				}
+				laptop = await Laptop.findByIdAndUpdate(
+					req.params.id,
+					{ ...req.body, image: req.file.path },
+					{ new: true }
+				);
+			});
+		} else {
+			laptop = await Laptop.findByIdAndUpdate(req.params.id, req.body, {
+				new: true,
+			});
+		}
+		if (!laptop) {
+			return res
+				.status(404)
+				.json({ ok: false, error: "Not Found", data: null });
+		}
+		res.status(200).json({ ok: true, error: null, data: laptop });
+	} catch (error) {
+		console.log("error", error);
+		res.status(500).json({ ok: false, error: "Internal Server Error", data: null });
+	}
+}
+);
 
-router.delete('/laptops/deleteLaptop/:id', isOwner, async(req,res) => {
-    try {
-        const laptop = await Laptop.findById(req.params.id);
-        if(!laptop) {
-            return res.status(404).send();
-        }
-        fs.unlink(laptop.image, async(err) => {
-            if(err) {
-                throw new Error(err);
-            }
-            await Laptop.deleteOne({_id : laptop._id});
-        });
-        res.status(200).send();
-    } catch (error) {
-        res.status(500).send();
-    }
+router.delete("/api/laptops/:id", isOwner, async (req, res) => {
+	try {
+		const laptop = await Laptop.findById(req.params.id);
+		if (!laptop) {
+			return res
+				.status(404)
+				.json({ ok: false, error: "Not Found", data: null });
+		}
+		fs.unlink(laptop.image, async (err) => {
+			if (err) {
+				throw new Error(err);
+			}
+			await Laptop.deleteOne({ _id: laptop._id });
+		});
+		res.status(200).json({ ok: true, error: null, data: null });
+	} catch (error) {
+		console.log("error", error);
+		res.status(500).json({ ok: false, error: "Internal Server Error", data: null });
+	}
 });
 
 module.exports = router;

@@ -7,34 +7,56 @@ const isUser = require('../middlerwares/user');
 
 const User = require('../db/models/user');
 
-router.get('/users/me', isUser, async (req, res) => {
-	const user = await User.findById(req._id);
-	res.status(200).json(user);
+router.get('/api/users/me', isUser, async (req, res) => {
+	try {
+		const user = await User.findById(req._id);
+		if (!user) {
+			return res.status(404).json({ ok: false, error: "Not Found", data: null });
+		}
+		res.status(200).json({ ok: true, data: { ...user._doc, password: '' }, error: null });
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({ ok: false, data: null, error: 'Internal Server Error' });
+	}
+
 });
 
-router.post('/users/newUser', async (req, res) => {
-	const hashedPassword = await bcrypt.hash(req.body.password, 8);
-	const user = new User({
-		...req.body,
-		password: hashedPassword,
-	});
-	await user.save();
-	res.status(201).json(user);
+router.post('/api/users/newUser', async (req, res) => {
+	try {
+		const hashedPassword = await bcrypt.hash(req.body.password, 8);
+		let user = new User({
+			...req.body,
+			password: hashedPassword,
+		});
+		user = await user.save();
+		res.status(201).json({ ok: true, data: {...user._doc, password: ''}, error: null });
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({ ok: false, data: null, error: 'Internal Server Error' });
+	}
+
 });
 
-router.post('/users/login', async (req, res) => {
-	const user = await User.findOne({ email: req.body.email });
-	if (!user) {
-		throw new Error('user not found');
+router.post('/api/users/login', async (req, res) => {
+	try {
+		const user = await User.findOne({ email: req.body.email });
+		if (!user) {
+			res.status(404).json({ ok: false, error: "Invalid Credentials", data: null });
+		}
+		const isMatch = await bcrypt.compare(req.body.password, user.password);
+		if (!isMatch) {
+			res.status(404).json({ ok: false, error: "Invalid Credentials", data: null });
+		}
+		const token = jwt.sign({ _id: user._id }, process.env.SECRET);
+		res.status(200).json({
+			ok: true,
+			data: { token: token},
+			error: false
+		});
+	} catch (error) {
+		console.log(error);
+		res.status(500).json({ ok: false, data: null, error: 'Internal Server Error' });
 	}
-	const isMatch = await bcrypt.compare(req.body.password, user.password);
-	if (!isMatch) {
-		throw new Error('invalid credentials');
-	}
-	const token = jwt.sign({ _id: user._id }, process.env.SECRET);
-	res.status(200).json({
-		token,
-	});
 });
 
 module.exports = router;
